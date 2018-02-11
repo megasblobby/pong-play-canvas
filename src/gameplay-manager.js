@@ -39,25 +39,33 @@ GameplayManager.attributes.add('bounceFactor', {
 // initialize code called once per entity
 GameplayManager.prototype.initialize = function() {
     this.NORMAL_LEFT_PADDLE = 0; this.NORMAL_RIGHT_PADDLE = 1;
+    this.NORMAL_LEFT_BORDER = 0; this.NORMAL_RIGHT_BORDER = 1;
     this.NORMAL_TOP_BORDER = 2; this.NORMAL_BOTTOM_BORDER = 3;
     this.normals = [new pc.Vec3(1, 0, 0), new pc.Vec3(-1, 0, 0),
-                    new pc.Vec3(0, 1, 0), new pc.Vec3(0, -1, 0)];
+                    new pc.Vec3(0, -1, 0), new pc.Vec3(0, 1, 0)];
 };
 
 // update code called every frame
 GameplayManager.prototype.update = function(dt) {
     var ballDirection = this.ball.script.ballManager.__attributes.direction;
+    var deltaY = 0;
     if (this.ball.position.x < this.minX) {
         if (this.isBallYBetweenPaddleExtremes(this.ball.position.y, this.paddleLeft)) {
             this.ball.script.ballManager.__attributes.direction = this.changeBallDirection(ballDirection.clone(), this.normals[this.NORMAL_LEFT_PADDLE]);
-            //this.changeBallDirection(this.ball, this.paddleLeft, this.bounceFactor);
+            
+            deltaY = this.ball.position.y - this.paddleLeft.position.y;
+            this.ball.script.ballManager.__attributes.direction.y += deltaY * this.bounceFactor;
+            
             this.ball.setPosition(this.minX, this.ball.position.y, this.ball.position.z);
         }
     }
     if (this.ball.position.x > this.maxX) {
         if (this.isBallYBetweenPaddleExtremes(this.ball.position.y, this.paddleRight)) {
             this.ball.script.ballManager.__attributes.direction = this.changeBallDirection(ballDirection.clone(), this.normals[this.NORMAL_RIGHT_PADDLE]);
-            //this.changeBallDirection(this.ball, this.paddleRight, this.bounceFactor);
+          
+            deltaY = this.ball.position.y - this.paddleRight.position.y;
+            this.ball.script.ballManager.__attributes.direction.y += deltaY * this.bounceFactor;
+            
             this.ball.setPosition(this.maxX, this.ball.position.y, this.ball.position.z);
         }
     }
@@ -80,11 +88,20 @@ GameplayManager.prototype.isBallYBetweenPaddleExtremes = function(ballY, paddle)
 };*/
 
 GameplayManager.prototype.changeBallDirection = function(ballDirection, normal) {
+    var originalBallDirection = ballDirection.clone();
+    //console.log("originalBallDirection: " + originalBallDirection );
     var negativeBallDirection = ballDirection.clone().scale(-1);
+    //console.log("negativeBallDirection: " + negativeBallDirection );
     var dotProduct = negativeBallDirection.dot(normal);
+    //console.log("dotProduct: " + dotProduct );
     var normalScaled = normal.clone().scale(dotProduct);
-    
-    return normalScaled.scale(2).add(ballDirection);
+    //console.log("normalScaled: " + normalScaled );
+    var normalScaledDoubled = normalScaled.scale(2);
+    //console.log("normalScaledDoubled: " + normalScaledDoubled );
+    var newDirection = new pc.Vec3().add2(originalBallDirection, normalScaledDoubled);
+    //console.log("normalScaledDoubled + ballDirection: " + newDirection);
+    //console.log("attribute Direction: " + ballDirection);
+    return newDirection;
 };
 
 //aggiunto 5/2 - controllo collisione col bordo dello schermo spostato da ballManager a gameplayManager
@@ -95,25 +112,30 @@ GameplayManager.prototype.changeBallDirection = function(ballDirection, normal) 
 //conviene? è bello?
 GameplayManager.prototype.borderHit = function(ball, bounceFactor) {
     var ballDirection = ball.script.ballManager.__attributes.direction;
+    var newDirection = new pc.Vec3();
     if (ball.position.x < this.cornerTopLeft.x) {
-        ballDirection.x = 1;
-        //ballDirection.y *= bounceFactor;
-        ball.position.x = this.cornerTopLeft.x;
+        newDirection = this.changeBallDirection(ballDirection.clone(), this.normals[this.NORMAL_LEFT_BORDER]); 
+        ball.script.ballManager.__attributes.direction = newDirection;
+        
+        ball.setPosition(this.cornerTopLeft.x, ball.getPosition().y, ball.getPosition().z); 
     }
     if (ball.position.x > this.cornerBottomRight.x) {
-        ballDirection.x = -1;
-        //ballDirection.y *= bounceFactor;
-        ball.position.x = this.cornerBottomRight.x;
+        newDirection = this.changeBallDirection(ballDirection.clone(), this.normals[this.NORMAL_RIGHT_BORDER]); 
+        ball.script.ballManager.__attributes.direction = newDirection;
+        
+        ball.setPosition(this.cornerBottomRight.x, ball.getPosition().y, ball.getPosition().z);
     }
     if (ball.position.y < this.cornerBottomRight.y) {
-        //ballDirection.x *= bounceFactor;
-        ballDirection.y = 1;
-        ball.position.y = this.cornerBottomRight.y;
+        newDirection = this.changeBallDirection(ballDirection.clone(), this.normals[this.NORMAL_BOTTOM_BORDER]); 
+        ball.script.ballManager.__attributes.direction = newDirection;
+        
+        ball.setPosition(ball.getPosition().x, this.cornerBottomRight.y, ball.getPosition().z);
     }
-    if (ball.position.y > this.cornerTopLeft.y) {
-        //ballDirection.x *= bounceFactor;
-        ballDirection.y = -1;
-        ball.position.y = this.cornerTopLeft.y;
+    if (ball.position.y > this.cornerTopLeft.y) {   
+        newDirection =  this.changeBallDirection(ballDirection.clone(), this.normals[this.NORMAL_TOP_BORDER]);
+        ball.script.ballManager.__attributes.direction = newDirection.clone(); 
+        
+        ball.setPosition(ball.getPosition().x, this.cornerTopLeft.y, ball.getPosition().z);
     }
 };
 
