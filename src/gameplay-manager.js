@@ -35,6 +35,11 @@ GameplayManager.attributes.add('bounceFactor', {
     default: 1
 });
 
+GameplayManager.attributes.add('accelFactor', {
+    type: 'number',
+    default: 0.2
+});
+
 GameplayManager.attributes.add('maxScore', {
     type: 'number',
     default: 10
@@ -60,7 +65,7 @@ GameplayManager.prototype.initialize = function() {
     this.NORMAL_TOP_BORDER = 2; this.NORMAL_BOTTOM_BORDER = 3;
     this.normals = [new pc.Vec3(1, 0, 0), new pc.Vec3(-1, 0, 0),
                     new pc.Vec3(0, -1, 0), new pc.Vec3(0, 1, 0)];
-    
+    initialSpeed = this.ball.script.ballManager.__attributes.speed;
     this.scorePlayer1.element.scoreValue = 0;
     this.scorePlayer2.element.scoreValue = 0;
 };
@@ -77,6 +82,7 @@ GameplayManager.prototype.update = function(dt) {
             this.ball.script.ballManager.__attributes.direction.y += deltaY * this.bounceFactor;
             
             this.ball.setPosition(this.minX, this.ball.position.y, this.ball.position.z);
+            this.ball.script.ballManager.__attributes.speed+=this.accelFactor;
             this.soundtrack.sound.play('Pong');
         }
     }
@@ -88,6 +94,7 @@ GameplayManager.prototype.update = function(dt) {
             this.ball.script.ballManager.__attributes.direction.y += deltaY * this.bounceFactor;
             
             this.ball.setPosition(this.maxX, this.ball.position.y, this.ball.position.z);
+            this.ball.script.ballManager.__attributes.speed+=this.accelFactor;
             this.soundtrack.sound.play('Pong');
         }
     }
@@ -126,11 +133,12 @@ GameplayManager.prototype.borderHit = function(ball, bounceFactor) {
     if (ball.position.x < this.cornerTopLeft.x) {
         newDirection = this.changeBallDirection(ballDirection.clone(), this.normals[this.NORMAL_LEFT_BORDER]); 
         ball.script.ballManager.__attributes.direction = newDirection;
-        
+        ball.script.ballManager.__attributes.speed+=this.accelFactor;
         this.soundtrack.sound.play('Pong');
         
         ball.setPosition(this.cornerTopLeft.x, ball.getPosition().y, ball.getPosition().z);
         this.scorePlayer2.element.scoreValue++;
+        ball.script.ballManager.__attributes.speed = initialSpeed;
         if (this.scorePlayer2.element.scoreValue >= this.maxScore) {
             this.scorePlayer1.element.scoreValue = 0;
             this.scorePlayer2.element.scoreValue = 0;
@@ -141,11 +149,12 @@ GameplayManager.prototype.borderHit = function(ball, bounceFactor) {
     if (ball.position.x > this.cornerBottomRight.x) {
         newDirection = this.changeBallDirection(ballDirection.clone(), this.normals[this.NORMAL_RIGHT_BORDER]); 
         ball.script.ballManager.__attributes.direction = newDirection;
-        
+        ball.script.ballManager.__attributes.speed+=this.accelFactor;
         this.soundtrack.sound.play('Pong');
         
         ball.setPosition(this.cornerBottomRight.x, ball.getPosition().y, ball.getPosition().z);
         this.scorePlayer1.element.scoreValue++;
+        ball.script.ballManager.__attributes.speed = initialSpeed;
         if (this.scorePlayer1.element.scoreValue >= this.maxScore) {
             this.scorePlayer1.element.scoreValue = 0;
             this.scorePlayer2.element.scoreValue = 0;
@@ -158,6 +167,7 @@ GameplayManager.prototype.borderHit = function(ball, bounceFactor) {
         ball.script.ballManager.__attributes.direction = newDirection;
         
         ball.setPosition(ball.getPosition().x, this.cornerBottomRight.y, ball.getPosition().z);
+        ball.script.ballManager.__attributes.speed+=this.accelFactor;
         this.soundtrack.sound.play('Pong');
     }
     // rimbalzo in alto
@@ -166,6 +176,7 @@ GameplayManager.prototype.borderHit = function(ball, bounceFactor) {
         ball.script.ballManager.__attributes.direction = newDirection.clone(); 
         
         ball.setPosition(ball.getPosition().x, this.cornerTopLeft.y, ball.getPosition().z);
+        ball.script.ballManager.__attributes.speed+=this.accelFactor;
         this.soundtrack.sound.play('Pong');
     }
 };
