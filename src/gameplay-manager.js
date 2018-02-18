@@ -12,14 +12,14 @@ GameplayManager.attributes.add('paddleRight', {
     type: 'entity'
 });
 
-GameplayManager.attributes.add('cornerTopLeft', { //aggiunto 5/2
+GameplayManager.attributes.add('cornerTopLeft', {
     type: 'vec2',
-    default: [-13, 6.5] //i valori di default me li ha ignorati
+    default: [-13, 6.5]
 });
 
-GameplayManager.attributes.add('cornerBottomRight', { //aggiunto 5/2
+GameplayManager.attributes.add('cornerBottomRight', {
     type: 'vec2',
-    default: [13, -6.5] //i valori di default me li ha ignorati
+    default: [13, -6.5]
 });
 
 GameplayManager.attributes.add('minX', {
@@ -35,6 +35,23 @@ GameplayManager.attributes.add('bounceFactor', {
     default: 1
 });
 
+GameplayManager.attributes.add('maxScore', {
+    type: 'number',
+    default: 10
+});
+
+GameplayManager.attributes.add('scorePlayer1', {
+    type: 'entity',
+});
+
+GameplayManager.attributes.add('scorePlayer2', {
+    type: 'entity',
+});
+
+GameplayManager.attributes.add('soundtrack', {
+    type: 'entity',
+});
+
 
 // initialize code called once per entity
 GameplayManager.prototype.initialize = function() {
@@ -43,6 +60,9 @@ GameplayManager.prototype.initialize = function() {
     this.NORMAL_TOP_BORDER = 2; this.NORMAL_BOTTOM_BORDER = 3;
     this.normals = [new pc.Vec3(1, 0, 0), new pc.Vec3(-1, 0, 0),
                     new pc.Vec3(0, -1, 0), new pc.Vec3(0, 1, 0)];
+    
+    this.scorePlayer1.element.scoreValue = 0;
+    this.scorePlayer2.element.scoreValue = 0;
 };
 
 // update code called every frame
@@ -57,6 +77,7 @@ GameplayManager.prototype.update = function(dt) {
             this.ball.script.ballManager.__attributes.direction.y += deltaY * this.bounceFactor;
             
             this.ball.setPosition(this.minX, this.ball.position.y, this.ball.position.z);
+            this.soundtrack.sound.play('Pong');
         }
     }
     if (this.ball.position.x > this.maxX) {
@@ -67,9 +88,14 @@ GameplayManager.prototype.update = function(dt) {
             this.ball.script.ballManager.__attributes.direction.y += deltaY * this.bounceFactor;
             
             this.ball.setPosition(this.maxX, this.ball.position.y, this.ball.position.z);
+            this.soundtrack.sound.play('Pong');
         }
     }
     this.borderHit(this.ball, this.bounceFactor);
+    
+    this.scorePlayer1.element.text = this.scorePlayer1.element.scoreValue;
+    this.scorePlayer2.element.text = this.scorePlayer2.element.scoreValue;
+
 };
 
 GameplayManager.prototype.isBallYBetweenPaddleExtremes = function(ballY, paddle) {
@@ -80,62 +106,67 @@ GameplayManager.prototype.isBallYBetweenPaddleExtremes = function(ballY, paddle)
     return ballY <= paddleMaxY && ballY >= paddleMinY;
 };
 
-/*GameplayManager.prototype.changeBallDirection = function(ball, paddle, bounceFactor) {
-    var ballDirection = ball.script.ballManager.__attributes.direction;
-    var deltaY = ball.position.y - paddle.position.y;
-    ballDirection.y += deltaY * bounceFactor;
-    ballDirection.x *= -1;
-};*/
 
 GameplayManager.prototype.changeBallDirection = function(ballDirection, normal) {
     var originalBallDirection = ballDirection.clone();
-    //console.log("originalBallDirection: " + originalBallDirection );
     var negativeBallDirection = ballDirection.clone().scale(-1);
-    //console.log("negativeBallDirection: " + negativeBallDirection );
     var dotProduct = negativeBallDirection.dot(normal);
-    //console.log("dotProduct: " + dotProduct );
     var normalScaled = normal.clone().scale(dotProduct);
-    //console.log("normalScaled: " + normalScaled );
     var normalScaledDoubled = normalScaled.scale(2);
-    //console.log("normalScaledDoubled: " + normalScaledDoubled );
     var newDirection = new pc.Vec3().add2(originalBallDirection, normalScaledDoubled);
-    //console.log("normalScaledDoubled + ballDirection: " + newDirection);
-    //console.log("attribute Direction: " + ballDirection);
+    
     return newDirection;
 };
 
-//aggiunto 5/2 - controllo collisione col bordo dello schermo spostato da ballManager a gameplayManager
-//fatto giusto per capire se avevo capito
-//l'idea era di fare un unico controllo per le collisioni, sia con le racchette che con i bordi
-//col metodo changeBallDirection attuale i bordi dovrebbero essere creati come entities e passati normalmente
-//esempio: GameplayManager.prototype.changeBallDirection = function(ball, SURFACE, bounceFactor)
-//conviene? è bello?
+
 GameplayManager.prototype.borderHit = function(ball, bounceFactor) {
     var ballDirection = ball.script.ballManager.__attributes.direction;
     var newDirection = new pc.Vec3();
+    // rimbalzo a sinistra
     if (ball.position.x < this.cornerTopLeft.x) {
         newDirection = this.changeBallDirection(ballDirection.clone(), this.normals[this.NORMAL_LEFT_BORDER]); 
         ball.script.ballManager.__attributes.direction = newDirection;
         
-        ball.setPosition(this.cornerTopLeft.x, ball.getPosition().y, ball.getPosition().z); 
+        this.soundtrack.sound.play('Pong');
+        
+        ball.setPosition(this.cornerTopLeft.x, ball.getPosition().y, ball.getPosition().z);
+        this.scorePlayer2.element.scoreValue++;
+        if (this.scorePlayer2.element.scoreValue >= this.maxScore) {
+            this.scorePlayer1.element.scoreValue = 0;
+            this.scorePlayer2.element.scoreValue = 0;
+            this.soundtrack.sound.play('Win');
+        }
     }
+    // rimbalzo a destra
     if (ball.position.x > this.cornerBottomRight.x) {
         newDirection = this.changeBallDirection(ballDirection.clone(), this.normals[this.NORMAL_RIGHT_BORDER]); 
         ball.script.ballManager.__attributes.direction = newDirection;
         
+        this.soundtrack.sound.play('Pong');
+        
         ball.setPosition(this.cornerBottomRight.x, ball.getPosition().y, ball.getPosition().z);
+        this.scorePlayer1.element.scoreValue++;
+        if (this.scorePlayer1.element.scoreValue >= this.maxScore) {
+            this.scorePlayer1.element.scoreValue = 0;
+            this.scorePlayer2.element.scoreValue = 0;
+            this.soundtrack.sound.play('Win');
+        }
     }
+    // rimbalzo in basso
     if (ball.position.y < this.cornerBottomRight.y) {
         newDirection = this.changeBallDirection(ballDirection.clone(), this.normals[this.NORMAL_BOTTOM_BORDER]); 
         ball.script.ballManager.__attributes.direction = newDirection;
         
         ball.setPosition(ball.getPosition().x, this.cornerBottomRight.y, ball.getPosition().z);
+        this.soundtrack.sound.play('Pong');
     }
+    // rimbalzo in alto
     if (ball.position.y > this.cornerTopLeft.y) {   
         newDirection =  this.changeBallDirection(ballDirection.clone(), this.normals[this.NORMAL_TOP_BORDER]);
         ball.script.ballManager.__attributes.direction = newDirection.clone(); 
         
         ball.setPosition(ball.getPosition().x, this.cornerTopLeft.y, ball.getPosition().z);
+        this.soundtrack.sound.play('Pong');
     }
 };
 
